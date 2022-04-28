@@ -3,6 +3,10 @@ import os
 from AcademicThesaurus.generate_data import get_latex_file, latex_by_line, latex_by_pattern, id_to_text
 
 
+def test_get_latex_file_url_error(tmpdir):
+	assert get_latex_file("https://arxiv.org/abs/does-not-exist/0608371v1", tmpdir) == None
+
+
 @pytest.fixture
 def rootdir():
     return os.path.dirname(os.path.abspath(__file__))
