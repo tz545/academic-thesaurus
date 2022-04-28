@@ -2,6 +2,7 @@ import re
 import urllib.request
 import tarfile
 import os
+import string
 
 
 def get_latex_file(arxiv_id, temp_dir_name):
@@ -33,10 +34,11 @@ def latex_by_line(latex_file):
 	
 	file_text = ""
 	environments_beg = []
-	environments_end = []
 	beg_regex = re.compile(r"\\begin\{\w+\}")
 	end_regex = re.compile(r"\\end\{\w+\}")
 	comments = re.compile(r"[^\\]%.+")
+	record = False
+	abstract = False
 
 	with open(latex_file) as fp:
 
@@ -49,28 +51,44 @@ def latex_by_line(latex_file):
 			if r"\begin{" in line:
 
 				env = beg_regex.search(line)
-				environments_beg.append(env.group(0)[7:-1])
+				env_keyword = env.group(0)[7:-1]
+				environments_beg.append(env_keyword)
+
+				## text of article begins at abstract
+				if env_keyword == 'abstract':
+					record = True
+					abstract = True
+
 				continue
 
 			if r"\end{" in line:
 
 				env = end_regex.search(line)
-				environments_end.append(env.group(0)[5:-1])
+				env_keyword = env.group(0)[5:-1]
+				environments_beg.remove(env_keyword)
+
+				if env_keyword == 'abstract':
+					abstract = False
+
 				continue
 
-			if 'document' in environments_beg and 'abstract' in environments_beg:
-				if 'abstract' in environments_end:
+			## if no abstract, text begins at first section
+			if r"\section{" in line:
+				record = True
 
-					## check if we are in another environment
-					## skip figures, tables, equations
-					if len(environments_beg) - len(environments_end) == 1:
-						file_text += line.strip() + ' '
+			if record:
+				if abstract:
 
-				else:
 					## check no comments in line
 					line = re.sub(r"[^\\]%.+", '', line)
-
 					file_text += line.strip() + ' '
+
+				else:
+					
+					if environments_beg == ["document"]:
+
+						line = re.sub(r"[^\\]%.+", '', line)
+						file_text += line.strip() + ' '
 
 	return file_text
 
@@ -109,7 +127,7 @@ def latex_by_pattern(file_text):
 	for i, comm in enumerate(remove2):
 		file_text = file_text.replace(comm.group(), '')
 
-	return file_text
+	return file_text.lower().strip().translate(str.maketrans('', '', string.punctuation))
 
 
 def id_to_text(arxiv_id):
