@@ -34,8 +34,8 @@ def latex_by_line(latex_file):
 	
 	file_text = ""
 	environments_beg = []
-	beg_regex = re.compile(r"\\begin\{\w+\}")
-	end_regex = re.compile(r"\\end\{\w+\}")
+	beg_regex = re.compile(r"\\begin\{\w+\*?\}")
+	end_regex = re.compile(r"\\end\{\w+\*?\}")
 	comments = re.compile(r"[^\\]%.+")
 	record = False
 	abstract = False
@@ -73,8 +73,9 @@ def latex_by_line(latex_file):
 				continue
 
 			## if no abstract, text begins at first section
-			if r"\section{" in line:
+			if r"\section" in line:
 				record = True
+				continue
 
 			if record:
 				if abstract:
