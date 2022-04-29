@@ -3,6 +3,10 @@ import urllib.request
 import tarfile
 import os
 import string
+from spacy.lang.en.stop_words import STOP_WORDS 
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+import nltk
 
 
 def get_latex_file(arxiv_id, temp_dir_name):
@@ -128,10 +132,39 @@ def latex_by_pattern(file_text):
 	for i, comm in enumerate(remove2):
 		file_text = file_text.replace(comm.group(), '')
 
+	return file_text
+
+
+def text_preprocessing(file_text, lemmatize=False):
+	"""Implements standard text preprocessing steps on extracted LaTex text
+	Lemmatization is optional as it is slow and only minimally successful"""
+
+	## convert to lower case
+	file_text = file_text.lower()
+
+	## remove numbers
+	file_text = re.sub(r'\d+', '', file_text)
+
 	## separate hyphenated words
 	file_text = file_text.replace('-', ' ')
 
-	return file_text.lower().strip().translate(str.maketrans('', '', string.punctuation))
+	## remove remaining punctuation
+	file_text = file_text.translate(str.maketrans("","", string.punctuation))
+
+	## filter stop words and non-english words (e.g. author names)
+	STOP_WORDS.update(['et', 'al', 'introduction', 'methods', 'discussion', 'conclusions', 'conclusion', 'figure', 'equation', 'ref', 'equ', 'eg'])
+	words = set(nltk.corpus.words.words())
+
+	tokens = word_tokenize(file_text)
+
+	if lemmatize:
+		lemmatizer = WordNetLemmatizer() 
+		filtered_text = [lemmatizer.lemmatize(i) for i in tokens if not i in STOP_WORDS and i in words]
+	
+	else:
+		filtered_text = [i for i in tokens if not i in STOP_WORDS and i in words]
+
+	return(filtered_text)
 
 
 def id_to_text(arxiv_id):
@@ -151,11 +184,13 @@ def id_to_text(arxiv_id):
 			raw_text = latex_by_line(os.path.join(temp_dir_name, file))
 			combined_text += latex_by_pattern(raw_text)
 
+	preprocessed_text = text_preprocessing(combined_text)
+
 	temp_files = os.listdir(temp_dir_name)
 	for f in temp_files:
 		os.remove(os.path.join(temp_dir_name, f))
 
-	return combined_text
+	return preprocessed_text
 
 
 if __name__ == "__main__":
