@@ -121,12 +121,15 @@ def latex_by_pattern(file_text):
 
 	## remove remaining ~\*{*}, \*{*} and ~\*, \* commands
 	remove1 = re.finditer(r"~?\\[\w\s*]+{[^}]+}", file_text)
-	remove2 = re.finditer(r"~?\\[\w\s*]+", file_text)
+	remove2 = re.finditer(r"~?\\[\w*]+", file_text)
 
 	for i, comm in enumerate(remove1):
 		file_text = file_text.replace(comm.group(), '')
 	for i, comm in enumerate(remove2):
 		file_text = file_text.replace(comm.group(), '')
+
+	## separate hyphenated words
+	file_text = file_text.replace('-', ' ')
 
 	return file_text.lower().strip().translate(str.maketrans('', '', string.punctuation))
 

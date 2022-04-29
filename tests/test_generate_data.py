@@ -36,9 +36,13 @@ def test_latex_by_pattern_removes(remove_patterns):
 	r"{\sl  keep-this text}", 
 	"keep-this text?", 
 	r"\tiny keep-this text"])
-def text_latex_by_pattern_extracts(extract_patterns):
-	assert latex_by_pattern(extract_patterns).strip() == "keep-this text"
+def test_latex_by_pattern_extracts(extract_patterns):
+	assert latex_by_pattern(extract_patterns).strip() == "keep this text"
 
 
-def test_id_to_text_returns_string():
+def test_id_to_text_success_return():
 	assert type(id_to_text("https://arxiv.org/abs/astro-ph/0608371v1")) == str
+
+
+def test_id_to_text_failed_return():
+	assert id_to_text("https://arxiv.org/abs/does-not-exist") == None
