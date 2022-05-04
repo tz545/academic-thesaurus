@@ -167,7 +167,7 @@ def text_preprocessing(file_text, lemmatize=False):
 	return(filtered_text)
 
 
-def id_to_text(arxiv_id):
+def id_to_text(arxiv_id, save=False):
 	"""Pipeline function for getting cleaned text from arxiv id"""
 
 	temp_dir_name = "raw_download"
@@ -190,8 +190,15 @@ def id_to_text(arxiv_id):
 	for f in temp_files:
 		os.remove(os.path.join(temp_dir_name, f))
 
+	if save:
+		save_name = re.sub(r'http.+\/', '', arxiv_id) + ".txt"
+		curr_path = os.path.realpath('.')
+		save_path = curr_path.replace("AcademicThesaurus/AcademicThesaurus", "AcademicThesaurus/data")
+		with open(os.path.join(save_path, save_name), "w") as outfile:
+			outfile.write(" ".join(preprocessed_text))
+
 	return preprocessed_text
 
 
 if __name__ == "__main__":
-	print(id_to_text("https://arxiv.org/abs/astro-ph/0608371v1"))
+	print(id_to_text("https://arxiv.org/abs/astro-ph/0608371v1", True))
