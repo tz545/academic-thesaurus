@@ -32,7 +32,7 @@ class Vocabulary:
 	def to_index(self, word):
 		return self.word2index[word]
 
-	def to_count(self, index):
+	def to_count(self, word):
 		return self.word2count[word]
 
 
@@ -55,7 +55,7 @@ class CBOWDataset(Dataset):
 		
 		for textfile in os.listdir(self.dataroot):
 			with open(os.path.join(self.dataroot, textfile)) as f:
-				data = f.readline()
+				data = f.readline().strip()
 				data = data.split(" ")
 
 			for i in range(self.window_size, len(data)-self.window_size):
@@ -79,10 +79,13 @@ if __name__ == "__main__":
 			v.add_wordlist(data)
 
 	dataset = CBOWDataset(datapath, v, 5)
-	dataloader = DataLoader(dataset, batch_size=5, shuffle=False)
+	dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
 	for i, batch in enumerate(dataloader):
 		cbow = batch[0]
 		word = batch[1]
 
-		for j in range(len(cbow)):
-			print([v.to_word(x.item()) for x in cbow[j]], "\t", v.to_word(word[j].item()))
+		print(cbow)
+		print(word)
+
+		# for j in range(len(cbow)):
+		# 	print([v.to_word(x.item()) for x in cbow[j]], "\t", v.to_word(word[j].item()))
