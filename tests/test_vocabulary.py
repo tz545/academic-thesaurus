@@ -63,3 +63,17 @@ def test_retriever_functions():
 	assert voc.to_index("secondword") == 1
 	assert voc.to_count("firstword") == 3
 	assert voc.to_count("secondword") == 1
+
+def test_prune_vocab():
+	voc = Vocabulary("test")
+	voc.add_word("firstword")
+	voc.add_word("firstword")
+	wordlist = ["firstword", "secondword"]
+	voc.add_wordlist(wordlist)
+	voc.prune_vocab(3)
+	assert voc.to_word(0) == "firstword"
+	assert voc.num_words == 1
+	assert voc.to_index("firstword") == 0
+	assert voc.to_index("secondword") == -1
+	assert voc.to_count("firstword") == 3
+	assert voc.to_word(-1) == "<unk>"

@@ -45,13 +45,17 @@ class Vocabulary:
 
 
 	def prune_vocab(self, min_word_frequency):
+		del_list = []
 		for word in self.word2index:
 			if self.word2count[word] < min_word_frequency:
-				index = self.word2index[word]
-				del self.word2index[word]
-				del self.index2word[index]
-				del self.word2count[word]
-				self.num_words -= 1
+				del_list.append(word)
+
+		for word in del_list:
+			index = self.word2index[word]
+			del self.word2index[word]
+			del self.index2word[index]
+			del self.word2count[word]
+			self.num_words -= 1
 
 
 class CBOWDataset(Dataset):
