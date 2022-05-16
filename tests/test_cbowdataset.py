@@ -15,13 +15,13 @@ def test_dataset_initializes(rootdir):
 
 	assert testset.__len__() == 3
 	assert testset.__getitem__(1)[1] == 3
-	assert torch.equal(testset.__getitem__(1)[0], torch.Tensor([1, 2, 4, 5]))
+	assert torch.equal(testset.__getitem__(1)[0], torch.tensor([1, 2, 4, 5], dtype=torch.long))
 	assert testset.samples[0][1] == 2
 	assert testset.samples[1][1] == 3
 	assert testset.samples[2][1] == 4
-	assert torch.equal(testset.samples[0][0], torch.Tensor([0, 1, 3, 4]))
-	assert torch.equal(testset.samples[1][0], torch.Tensor([1, 2, 4, 5]))
-	assert torch.equal(testset.samples[2][0], torch.Tensor([2, 3, 5, 6]))
+	assert torch.equal(testset.samples[0][0], torch.tensor([0, 1, 3, 4], dtype=torch.long))
+	assert torch.equal(testset.samples[1][0], torch.tensor([1, 2, 4, 5], dtype=torch.long))
+	assert torch.equal(testset.samples[2][0], torch.tensor([2, 3, 5, 6], dtype=torch.long))
 
 def test_dataset_dataloader(rootdir):
 	voc = Vocabulary("test")

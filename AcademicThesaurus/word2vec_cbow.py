@@ -1,5 +1,7 @@
 import os
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader, random_split
 
 class Vocabulary:
@@ -27,13 +29,29 @@ class Vocabulary:
 			self.add_word(word)
 
 	def to_word(self, index):
-		return self.index2word[index]
+		if index != -1:
+			return self.index2word[index]
+		else:
+			return '<unk>'
 
 	def to_index(self, word):
-		return self.word2index[word]
+		if word in self.word2index:
+			return self.word2index[word]
+		else:
+			return -1
 
 	def to_count(self, word):
 		return self.word2count[word]
+
+
+	def prune_vocab(self, min_word_frequency):
+		for word in self.word2index:
+			if self.word2count[word] < min_word_frequency:
+				index = self.word2index[word]
+				del self.word2index[word]
+				del self.index2word[index]
+				del self.word2count[word]
+				self.num_words -= 1
 
 
 class CBOWDataset(Dataset):
@@ -62,7 +80,25 @@ class CBOWDataset(Dataset):
 				slider = [data[i-j] for j in range(self.window_size, 0, -1)] + [data[i+j] for j in range(1, self.window_size+1)] 
 				# print(slider)
 				slider = [self.vocab.to_index(x) for x in slider]
-				self.samples.append((torch.Tensor(slider), self.vocab.to_index(data[i])))
+				self.samples.append((torch.tensor(slider, dtype=torch.long), self.vocab.to_index(data[i])))
+
+
+class CBOW_Model(nn.Module):
+
+   def __init__(self, vocab_size, embedding_dim):
+       super(CBOW_Model, self).__init__()
+
+       self.embeddings = nn.Embedding(vocab_size, embedding_dim)
+       self.linear1 = nn.Linear(embedding_dim, 128)
+       self.linear2 = nn.Linear(128, vocab_size)
+
+   def forward(self, inputs):
+       # embeds = sum(self.embeddings(inputs)).view(1,-1)
+       embeds = self.embeddings(inputs)
+       embeds = embeds.mean(axis=1)
+       out = F.relu(self.linear1(embeds))
+       out = self.linear2(out)
+       return out
 
 
 
@@ -77,15 +113,18 @@ if __name__ == "__main__":
 			data = f.readline()
 			data = data.split(" ")
 			v.add_wordlist(data)
+	print(v.num_words)
 
 	dataset = CBOWDataset(datapath, v, 5)
-	dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
-	for i, batch in enumerate(dataloader):
-		cbow = batch[0]
-		word = batch[1]
 
-		print(cbow)
-		print(word)
+	print(dataset.__len__())
+	# dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
+	# for i, batch in enumerate(dataloader):
+	# 	cbow = batch[0]
+	# 	word = batch[1]
+
+	# 	print(cbow)
+	# 	print(word)
 
 		# for j in range(len(cbow)):
 		# 	print([v.to_word(x.item()) for x in cbow[j]], "\t", v.to_word(word[j].item()))

@@ -1,5 +1,6 @@
 import re
 import urllib.request
+import feedparser
 import tarfile
 import os
 import string
@@ -7,6 +8,7 @@ from spacy.lang.en.stop_words import STOP_WORDS
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 import nltk
+import shutil
 
 
 def get_latex_file(arxiv_id, temp_dir_name):
@@ -43,57 +45,94 @@ def latex_by_line(latex_file):
 	comments = re.compile(r"[^\\]%.+")
 	record = False
 	abstract = False
+	doc = False
 
 	with open(latex_file) as fp:
 
-		for i, line in enumerate(fp):
+		try:
+			for i, line in enumerate(fp):
 
-			if len(line.lstrip()) > 0:
-				if line.lstrip()[0] == '%':
+				if len(line.lstrip()) > 0:
+					if line.lstrip()[0] == '%':
+						continue
+
+				if r"\newcommand{" in line and r"\begin{" in line:
+					return None
+
+				if r"\newcommand{" in line and r"\end{" in line:
+					return None
+
+				if r"\begin{" in line:
+
+					matches = re.findall(beg_regex, line)
+					for m in matches:
+						env_keyword = m[7:-1]
+						environments_beg.append(env_keyword)
+
+						if env_keyword == 'abstract':
+							record = True
+							abstract = True
+
+						if env_keyword == 'document':
+							doc = True
+
+					# env = beg_regex.search(line)
+					# env_keyword = env.group(0)[7:-1]
+					# environments_beg.append(env_keyword)
+
+					# ## text of article begins at abstract
+					# if env_keyword == 'abstract':
+					# 	record = True
+					# 	abstract = True
+
 					continue
 
-			if r"\begin{" in line:
+				if r"\end{" in line and doc:
 
-				env = beg_regex.search(line)
-				env_keyword = env.group(0)[7:-1]
-				environments_beg.append(env_keyword)
+					matches = re.findall(end_regex, line)
+					for m in matches:
+						env_keyword = m[5:-1]
 
-				## text of article begins at abstract
-				if env_keyword == 'abstract':
+						if env_keyword == 'document':
+							break
+
+						else:
+							environments_beg.remove(env_keyword)
+
+						if env_keyword == 'abstract':
+							abstract = False
+
+
+					# env = end_regex.search(line)
+					# env_keyword = env.group(0)[5:-1]
+					# environments_beg.remove(env_keyword)
+
+					# if env_keyword == 'abstract':
+					# 	abstract = False
+
+					continue
+
+				## if no abstract, text begins at first section
+				if r"\section" in line:
 					record = True
-					abstract = True
+					continue
 
-				continue
+				if record:
+					if abstract:
 
-			if r"\end{" in line:
-
-				env = end_regex.search(line)
-				env_keyword = env.group(0)[5:-1]
-				environments_beg.remove(env_keyword)
-
-				if env_keyword == 'abstract':
-					abstract = False
-
-				continue
-
-			## if no abstract, text begins at first section
-			if r"\section" in line:
-				record = True
-				continue
-
-			if record:
-				if abstract:
-
-					## check no comments in line
-					line = re.sub(r"[^\\]%.+", '', line)
-					file_text += line.strip() + ' '
-
-				else:
-					
-					if environments_beg == ["document"]:
-
+						## check no comments in line
 						line = re.sub(r"[^\\]%.+", '', line)
 						file_text += line.strip() + ' '
+
+					else:
+						
+						if environments_beg == ["document"]:
+
+							line = re.sub(r"[^\\]%.+", '', line)
+							file_text += line.strip() + ' '
+
+		except UnicodeDecodeError:
+			return None
 
 	return file_text
 
@@ -177,18 +216,20 @@ def id_to_text(arxiv_id, save=False):
 	file_seach = get_latex_file(arxiv_id, temp_dir_name)
 
 	if file_seach == None:
+		shutil.rmtree(temp_dir_name)
 		return None
 	else:
 		combined_text = ''
 		for file in file_seach:
 			raw_text = latex_by_line(os.path.join(temp_dir_name, file))
-			combined_text += latex_by_pattern(raw_text)
+			if raw_text == None:
+				return None 
+			else:
+				combined_text += latex_by_pattern(raw_text)
 
 	preprocessed_text = text_preprocessing(combined_text)
 
-	temp_files = os.listdir(temp_dir_name)
-	for f in temp_files:
-		os.remove(os.path.join(temp_dir_name, f))
+	shutil.rmtree(temp_dir_name)
 
 	if save:
 		save_name = re.sub(r'http.+\/', '', arxiv_id) + ".txt"
@@ -198,6 +239,38 @@ def id_to_text(arxiv_id, save=False):
 			outfile.write(" ".join(preprocessed_text))
 
 	return preprocessed_text
+
+
+def arxiv_query(keywords, no_results):
+
+	base_url = 'http://export.arxiv.org/api/query?'
+
+	search_query = 'abs:' + keywords
+	arxiv_ids = []
+
+	counter = 0
+
+	## query times out if too many results requested at once
+	while counter < no_results:
+
+		start = counter
+		max_results = min(200, no_results-counter)
+
+		query = 'search_query=%s&start=%i&max_results=%i' % (search_query,
+													  start,
+													  max_results)
+		response = urllib.request.urlopen(base_url+query).read()
+		feed = feedparser.parse(response)
+		
+		if len(feed.entries) == 0:
+			break
+
+		for entry in feed.entries:
+			arxiv_ids.append(entry.get('id'))
+
+		counter += len(feed.entries)
+
+	return arxiv_ids
 
 
 if __name__ == "__main__":
