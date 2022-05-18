@@ -11,7 +11,7 @@ class Vocabulary:
 		self.word2index = {}
 		self.word2count = {}
 		self.index2word = {}
-		self.num_words = 0
+		self.num_words = 1
 
 	def add_word(self, word):
 		if word not in self.word2index:
@@ -29,7 +29,7 @@ class Vocabulary:
 			self.add_word(word)
 
 	def to_word(self, index):
-		if index != -1:
+		if index != 0:
 			return self.index2word[index]
 		else:
 			return '<unk>'
@@ -38,24 +38,23 @@ class Vocabulary:
 		if word in self.word2index:
 			return self.word2index[word]
 		else:
-			return -1
+			return 0
 
 	def to_count(self, word):
 		return self.word2count[word]
 
-
 	def prune_vocab(self, min_word_frequency):
-		del_list = []
+		keep_list = []
 		for word in self.word2index:
-			if self.word2count[word] < min_word_frequency:
-				del_list.append(word)
+			if self.word2count[word] >= min_word_frequency:
+				keep_list.append(word)
 
-		for word in del_list:
-			index = self.word2index[word]
-			del self.word2index[word]
-			del self.index2word[index]
-			del self.word2count[word]
-			self.num_words -= 1
+		indices = [i+1 for i in range(len(keep_list))]
+		word_counts = [self.word2count[w] for w in keep_list]
+		self.word2index = dict(zip(keep_list, indices))
+		self.index2word = dict(zip(indices, keep_list))
+		self.word2count = dict(zip(keep_list, word_counts))
+		self.num_words = len(keep_list) + 1
 
 
 class CBOWDataset(Dataset):

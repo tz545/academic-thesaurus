@@ -56,13 +56,15 @@ def latex_by_line(latex_file):
 					if line.lstrip()[0] == '%':
 						continue
 
-				if r"\newcommand{" in line and r"\begin{" in line:
+				if r"\newcommand{" in line and r"\begin" in line:
 					return None
 
-				if r"\newcommand{" in line and r"\end{" in line:
+				if r"\newcommand{" in line and r"\end" in line:
 					return None
 
-				if r"\begin{" in line:
+				if r"\begin" in line:
+
+					line = line.replace(' ', '')
 
 					matches = re.findall(beg_regex, line)
 					for m in matches:
@@ -76,18 +78,11 @@ def latex_by_line(latex_file):
 						if env_keyword == 'document':
 							doc = True
 
-					# env = beg_regex.search(line)
-					# env_keyword = env.group(0)[7:-1]
-					# environments_beg.append(env_keyword)
-
-					# ## text of article begins at abstract
-					# if env_keyword == 'abstract':
-					# 	record = True
-					# 	abstract = True
-
 					continue
 
-				if r"\end{" in line and doc:
+				if r"\end" in line and doc:
+
+					line = line.replace(' ', '')
 
 					matches = re.findall(end_regex, line)
 					for m in matches:
@@ -97,18 +92,13 @@ def latex_by_line(latex_file):
 							break
 
 						else:
-							environments_beg.remove(env_keyword)
+							try:
+								environments_beg.remove(env_keyword)
+							except ValueError:
+								return None
 
 						if env_keyword == 'abstract':
 							abstract = False
-
-
-					# env = end_regex.search(line)
-					# env_keyword = env.group(0)[5:-1]
-					# environments_beg.remove(env_keyword)
-
-					# if env_keyword == 'abstract':
-					# 	abstract = False
 
 					continue
 
@@ -142,6 +132,7 @@ def latex_by_pattern(file_text):
 	Tries to perserve text from section headings and italicized/bolded text"""
 
 	## remove math
+	file_text = re.sub(r"\$\$[^\$]+\$\$", '', file_text)
 	file_text = re.sub(r"\$[^\$]+\$", '', file_text)
 
 	## extract words from \section, \textit \emph etc (currently also includes \bibstyle)
@@ -149,7 +140,8 @@ def latex_by_pattern(file_text):
 	command_bracket = re.finditer(r"\\[\w\s*]+{[a-z\sA-Z\-]+}", file_text)
 	for i, comm in enumerate(command_bracket):	
 		words = bracket_text1.search(comm.group())
-		file_text = file_text.replace(comm.group(), words.group(0)[1:-1])
+		if words != None:
+			file_text = file_text.replace(comm.group(), words.group(0)[1:-1])
 
 	## extract words from {\sl }, {\it } etc
 	## this still keeps the trailing '}', but this can be removed later with all punctuation
@@ -159,7 +151,8 @@ def latex_by_pattern(file_text):
 	## once for each unique comm. 
 	for i, comm in enumerate(bracket_command):
 		command = bracket_text2.search(comm.group())
-		file_text = file_text.replace(command.group(0), '')
+		if command != None:
+			file_text = file_text.replace(command.group(0), '')
 
 
 	## remove remaining ~\*{*}, \*{*} and ~\*, \* commands
@@ -215,30 +208,37 @@ def id_to_text(arxiv_id, save=False):
 
 	file_seach = get_latex_file(arxiv_id, temp_dir_name)
 
-	if file_seach == None:
-		shutil.rmtree(temp_dir_name)
-		return None
-	else:
-		combined_text = ''
+	combined_text = ''
+
+	if file_seach != None:
+
 		for file in file_seach:
 			raw_text = latex_by_line(os.path.join(temp_dir_name, file))
-			if raw_text == None:
-				return None 
-			else:
+			if raw_text != None:
 				combined_text += latex_by_pattern(raw_text)
 
-	preprocessed_text = text_preprocessing(combined_text)
+	else:
+		shutil.rmtree(temp_dir_name)
+		return 1
 
 	shutil.rmtree(temp_dir_name)
 
-	if save:
-		save_name = re.sub(r'http.+\/', '', arxiv_id) + ".txt"
-		curr_path = os.path.realpath('.')
-		save_path = curr_path.replace("AcademicThesaurus/AcademicThesaurus", "AcademicThesaurus/data")
-		with open(os.path.join(save_path, save_name), "w") as outfile:
-			outfile.write(" ".join(preprocessed_text))
+	if combined_text == '':
 
-	return preprocessed_text
+		return 2
+
+	else:
+
+		preprocessed_text = text_preprocessing(combined_text)
+
+		if save:
+			save_name = re.sub(r'http.+\/', '', arxiv_id) + ".txt"
+			curr_path = os.path.realpath('.')
+			save_path = curr_path.replace("AcademicThesaurus/AcademicThesaurus", "AcademicThesaurus/data")
+			with open(os.path.join(save_path, save_name), "w") as outfile:
+				outfile.write(" ".join(preprocessed_text))
+
+		return preprocessed_text
 
 
 def arxiv_query(keywords, no_results):

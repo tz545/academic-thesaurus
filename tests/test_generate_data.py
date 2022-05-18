@@ -53,4 +53,4 @@ def test_id_to_text_success_return():
 	assert type(id_to_text("https://arxiv.org/abs/astro-ph/0608371v1")[0]) == str
 
 def test_id_to_text_failed_return():
-	assert id_to_text("https://arxiv.org/abs/does-not-exist") == None
+	assert id_to_text("https://arxiv.org/abs/does-not-exist") == 1

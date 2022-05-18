@@ -12,8 +12,19 @@ def download_data(keywords, no_results):
 	keywords = "%22" + keywords.replace(' ', '+') + "%22"
 
 	arxiv_ids = arxiv_query(keywords, no_results)
+	success = 0
+	no_file = 0
+	skipped_parse = 0
 	for paper_id in arxiv_ids:
-		id_to_text(paper_id, save=True)
+		result = id_to_text(paper_id, save=True)
+		if result == 1:
+			no_file += 1
+		elif result == 2:
+			skipped_parse += 1
+		else:
+			success += 1
+
+	print("Success: ", success, "\t No file: ", no_file, "\t Skipped parsing: ", skipped_parse)
 
 
 def build_dataset(keywords, window_size, save=False):
@@ -26,6 +37,10 @@ def build_dataset(keywords, window_size, save=False):
 			data = f.readline()
 			data = data.split(" ")
 			voc.add_wordlist(data)
+
+	print("Size of vocab before prune: ", voc.num_words)
+	voc.prune_vocab(10)
+	print("Size of vocabulary: ", voc.num_words)
 
 	dataset = CBOWDataset(datapath, voc, window_size)
 
@@ -77,7 +92,8 @@ def train_model(keywords, dataset, vocab, batch_size, epochs, device):
 
 			total_train_loss += loss.item()/len(batch[1])
 
-			train_loss.append(loss.item()/len(batch[1]))
+			if i%100 == 0:
+				train_loss.append(loss.item()/len(batch[1]))
 
 		print("Total training loss: ", total_train_loss/(i+1))
 
@@ -90,7 +106,9 @@ def train_model(keywords, dataset, vocab, batch_size, epochs, device):
 
 				total_val_loss += loss.item()/len(batch[1])
 
-				val_loss.append(loss.item()/len(batch[1]))
+				if i%100 == 0:
+
+					val_loss.append(loss.item()/len(batch[1]))
 
 			print("Total validation loss: ", total_val_loss/(i+1))
 
@@ -100,16 +118,16 @@ def train_model(keywords, dataset, vocab, batch_size, epochs, device):
 
 
 if __name__ == '__main__':
-	# download_data("ecology", 200)
+	# download_data("ecology", 10000)
 	build_dataset("ecology", 2, save=True)
 
-	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+	# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-	savepath = os.path.realpath('.').replace("AcademicThesaurus/AcademicThesaurus", "AcademicThesaurus/data_processed")
+	# savepath = os.path.realpath('.').replace("AcademicThesaurus/AcademicThesaurus", "AcademicThesaurus/data_processed")
 
-	with open(os.path.join(savepath, "ecology_vocab.pkl"), 'rb') as inp:
-		voc = pickle.load(inp)
+	# with open(os.path.join(savepath, "ecology_vocab.pkl"), 'rb') as inp:
+	# 	voc = pickle.load(inp)
 
-	with open(os.path.join(savepath, "ecology_ds.pkl"), 'rb') as inp:
-		dataset = pickle.load(inp)
-	train_loss, val_loss = train_model("ecology", dataset, voc, batch_size=10, epochs=1, device=device)
+	# with open(os.path.join(savepath, "ecology_ds.pkl"), 'rb') as inp:
+	# 	dataset = pickle.load(inp)
+	# train_loss, val_loss = train_model("ecology", dataset, voc, batch_size=10, epochs=1, device=device)
