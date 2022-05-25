@@ -4,6 +4,8 @@ import torch
 import numpy as np 
 from word2vec_cbow import Vocabulary, CBOW_Model
 
+## with code for computing cosine similarity taken from https://github.com/OlgaChernytska/word2vec-pytorch
+
 def get_top_similar(embeddings_norm, vocab, word, topN):
 	word_id = vocab.word2index[word]
 	if word_id == 0:
