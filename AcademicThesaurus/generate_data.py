@@ -241,14 +241,14 @@ def id_to_text(arxiv_id, save=False):
 		return preprocessed_text
 
 
-def arxiv_query(keywords, no_results):
+def arxiv_query(keywords, no_results, beg=0):
 
 	base_url = 'http://export.arxiv.org/api/query?'
 
 	search_query = 'abs:' + keywords
 	arxiv_ids = []
 
-	counter = 0
+	counter = beg
 
 	## query times out if too many results requested at once
 	while counter < no_results:

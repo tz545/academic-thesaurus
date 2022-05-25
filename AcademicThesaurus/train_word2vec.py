@@ -7,11 +7,11 @@ from torch.utils.data import DataLoader, random_split
 import torch.nn as nn
 
 
-def download_data(keywords, no_results):
+def download_data(keywords, no_results, start=0):
 
 	keywords = "%22" + keywords.replace(' ', '+') + "%22"
 
-	arxiv_ids = arxiv_query(keywords, no_results)
+	arxiv_ids = arxiv_query(keywords, no_results, start)
 	success = 0
 	no_file = 0
 	skipped_parse = 0
@@ -118,7 +118,7 @@ def train_model(keywords, dataset, vocab, batch_size, epochs, device):
 
 
 if __name__ == '__main__':
-	# download_data("ecology", 10000)
+	download_data("ecology", 20000, 1000)
 	build_dataset("ecology", 2, save=True)
 
 	# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
