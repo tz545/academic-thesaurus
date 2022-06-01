@@ -6,20 +6,28 @@ from word2vec_cbow import Vocabulary, CBOW_Model
 
 ## with code for computing cosine similarity taken from https://github.com/OlgaChernytska/word2vec-pytorch
 
-def get_top_similar(embeddings_norm, vocab, word, topN):
+def get_top_similar(embeddings, vocab, word, topN):
+	"""Expect vocab to start numbering word ids starting from 1"""
+
+	# normalize embeddings
+	norms = (embeddings ** 2).sum(axis=1) ** (1 / 2)
+	norms = np.reshape(norms, (len(norms), 1))
+	embeddings_norm = embeddings / norms
+
 	word_id = vocab.word2index[word]
 	if word_id == 0:
 		print("Out of vocabulary word")
 		return
 
-	word_vec = embeddings_norm[word_id]
+	word_vec = embeddings_norm[word_id-1] # adjust for fact that word ids start at 1
 	word_vec = np.reshape(word_vec, (len(word_vec), 1))
 	dists = np.matmul(embeddings_norm, word_vec).flatten()
 	topN_ids = np.argsort(-dists)[1 : topN + 1]
 
+
 	topN_dict = {}
 	for sim_word_id in topN_ids:
-		sim_word = vocab.index2word[sim_word_id]
+		sim_word = vocab.index2word[sim_word_id+1] # again adjusting for word ids starting at 1
 		topN_dict[sim_word] = dists[sim_word_id]
 	return topN_dict
 
@@ -43,12 +51,7 @@ def academic_thesaurus(keywords, word, cuda=False, topN=10):
 	embeddings = list(model.parameters())[0]
 	embeddings = embeddings.cpu().detach().numpy()
 
-	# normalization
-	norms = (embeddings ** 2).sum(axis=1) ** (1 / 2)
-	norms = np.reshape(norms, (len(norms), 1))
-	embeddings_norm = embeddings / norms
-
-	return get_top_similar(embeddings_norm, voc, word, topN)
+	return get_top_similar(embeddings, voc, word, topN)
 
 
 if __name__ == '__main__':

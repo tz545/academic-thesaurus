@@ -118,7 +118,7 @@ def train_model(keywords, dataset, vocab, batch_size, epochs, device):
 
 
 if __name__ == '__main__':
-	download_data("ecology", 20000, 1000)
+	# download_data("ecology", 500, 0)
 	build_dataset("ecology", 2, save=True)
 
 	# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
